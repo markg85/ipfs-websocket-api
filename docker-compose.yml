@@ -1,0 +1,27 @@
+version: '3.8'
+services:
+    ipfs_host:
+        image: markg85/ipfs_extended
+        restart: unless-stopped
+        ports:
+            - "4001:4001"
+            - "127.0.0.1:8080:8080"
+            - "127.0.0.1:5001:5001"
+        volumes:
+            - /home/docker-data/ipfs:/data/ipfs/:Z
+    iwa:
+        image: markg85/ipfs-websocket-api
+        restart: unless-stopped
+        depends_on:
+          - "ipfs_host"
+    nginx:
+        image: nginx:mainline-alpine
+        restart: unless-stopped
+        depends_on:
+          - "iwa"
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - "/home/docker-data/nginx/nginx.conf:/etc/nginx/nginx.conf:ro"
+            - "/home/docker-data/nginx/conf.d:/etc/nginx/conf.d:ro"
