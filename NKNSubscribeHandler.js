@@ -71,7 +71,8 @@ class NKNSubscribeHandler
             {
                 this.nknClient.send(
                     addr,
-                    JSON.stringify({channel: channel, data: data})
+                    JSON.stringify({channel: channel, data: data}),
+                    {responseTimeout: 0}
                 );
             }
         } catch (error) {
