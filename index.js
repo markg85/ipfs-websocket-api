@@ -1,6 +1,7 @@
 // Require the framework and instantiate it
 const fastify = require('fastify')({ logger: true })
 const osu = require('node-os-utils')
+const { BloomFilter } = require('bloom-filters')
 const io = require('socket.io')(fastify.server, {
     cors: {
         origin: "*",
@@ -53,6 +54,9 @@ async function welcomeConnection(socket) {
         status = "CONN_KILLED_TOO_HIGH_CPU_LOAD"
         message = "The CPU load is above 90%. Not accepting new connections, closing. Use a different server."
     }
+
+    // Install a bloom filter on the socket. This is later used to determine if a message has already been send in order to not send the same data twice.
+    socket.bloom = new BloomFilter(10000, 4);
 
     return {
         id: socket.id,

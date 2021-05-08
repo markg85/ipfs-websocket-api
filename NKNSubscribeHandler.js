@@ -1,21 +1,26 @@
 'use strict';
+
+const WebSocket = require('ws');
 const CRC32 = require('crc-32'); 
 
 // This class manages n registrants for 1 topic.
-// An IPFSSubscribeHandler class only handles 1 topic and sends messages 
+// An NKNSubscribeHandler class only handles 1 topic and sends messages 
 // received on that one topic to each of the registrants (sockets).
-class IPFSSubscribeHandler
+class NKNSubscribeHandler
 {
-    constructor(channel, ipfsClient)
+    constructor(channel, nknClient)
     {
         this.channel = channel
         this.sockets = []
-        this.ipfsClient = ipfsClient;
+        this.nknClient = nknClient;
 
-        // Subscribe to the channel
-        this.ipfsClient.pubsub.subscribe(this.channel, (msg) => {
-            this.subscribe(msg)
+        // Public key: 03fd4a45582bc45065c556e580543f7aeae14032f99ed24956330855c5ea4bbe
+
+        this.nknClient.onMessage(async ({ src, payload, isEncrypted }) => {
+            this.subscribe({ src, payload, isEncrypted })
         });
+
+        console.log(this.nknClient.getSeed(), this.nknClient.getPublicKey());
 
         console.log(`Subscribe to channel: ${channel}`)
     }
@@ -53,27 +58,52 @@ class IPFSSubscribeHandler
 
     async publish(channel, data)
     {
-        this.ipfsClient.pubsub.publish(channel, JSON.stringify(data));
+        if (this.nknClient.isReady == false) {
+            await Promise.all([
+                new Promise((resolve, reject) => this.nknClient.onConnect(resolve))
+            ]);
+
+            await new Promise((resolve, reject) => setTimeout(resolve, 1000));
+        }
+
+        try {
+            for (let addr of this.nknClient.destaddrs)
+            {
+                this.nknClient.send(
+                    addr,
+                    JSON.stringify({channel: channel, data: data})
+                );
+            }
+        } catch (error) {
+            console.log(error)
+        }
+
     }
 
-    // Every time a message arrives on the IPFS pubsub channel, this function is called.
-    // All sockets registered for this channel will then get the data that was send to this channel.
-    // Note that we only re-emit the "data: any" value, that is what should have been send from
-    // the website end. The msg here contains more that we don't re-emit to the website.
-    // Also, emitting does depend on selfEmit. If that's true (you want to receive your own message)
-    // If it's false, you don't want to receive your own message. By default it's false.
     async subscribe(msg)
     {
-        // return;
         console.log(`Received message on channel: ${this.channel}, these sockets could receive this message (pre filtering).`)
         console.table(this.sockets.map(sock => sock.id))
         
-        let enc = new TextDecoder("utf-8");
-        let decodedStr = enc.decode(msg.data);
+        let decodedData = JSON.parse(msg.payload);
 
-        let crc = CRC32.str(decodedStr).toString()
+        if (decodedData?.channel != this.channel) {
+            console.warn("Received data not intended for this channel.")
+            console.log(decodedData)
+            return;
+        }
 
-        let decodedData = JSON.parse(decodedStr);
+        if (decodedData?.data == undefined) {
+            console.error("No data")
+            console.log(decodedData)
+            return;
+        }
+
+        let crc = CRC32.str(JSON.stringify(decodedData.data)).toString()
+
+        // This is the data we're interested in. This came from the website and needs to be broadcast to all interested parties.
+        decodedData = decodedData.data
+
         let filteredSockets = this.sockets;
 
         if (decodedData?.selfEmit === false)
@@ -90,14 +120,14 @@ class IPFSSubscribeHandler
                 return true;
             }
 
-            console.log(`Kicking ${sock.id} from IPFS, message already handled by another backend`)
+            console.log(`Kicking ${sock.id} from NKN, message already handled by another backend`)
 
             return false;
         });
 
         console.log(`Sending data to:`)
         console.table(filteredSockets.map(sock => sock.id))
-        let stringData = `P${JSON.stringify(decodedData?.data)}`
+        let stringData = `N${JSON.stringify(decodedData?.data)}`
         let buffer = Buffer.from(stringData).toString('base64')
 
         for (let socket of filteredSockets)
@@ -110,8 +140,7 @@ class IPFSSubscribeHandler
     unsubscribe()
     {
         console.log(`No more sockets waiting for data from this channel. Unsubscribing.`)
-        this.ipfsClient.pubsub.unsubscribe(this.channel);
     }
 }
 
-module.exports = IPFSSubscribeHandler;
+module.exports = NKNSubscribeHandler;

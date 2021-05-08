@@ -10,8 +10,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bloom-filters": "^1.3.4",
+    "crc-32": "^1.2.0",
     "fastify": "^3.14.2",
     "ipfs-http-client": "^49.0.4",
+    "multimap": "^1.1.0",
+    "nkn-sdk": "^1.2.0",
     "node-os-utils": "^1.3.5",
     "socket.io": "^4.0.1"
   }
