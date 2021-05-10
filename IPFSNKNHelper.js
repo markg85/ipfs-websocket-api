@@ -52,20 +52,20 @@ class IPFSNKNHelper
                 // We have been asked to identify ourselves to jsonData.nknPublicKey
                 if (jsonData.task == "IDENTIFY" && jsonData?.nknPublicKey) {
                     // Tell the network my public key
-                    this.ipfsClient.pubsub.publish(this.opsnNknChannel, JSON.stringify({ task: "IDENTIFY_RESPONSE", myPublicKey: this.nknClient.getPublicKey() }));
+                    this.ipfsClient.pubsub.publish(this.opsnNknChannel, JSON.stringify({ task: "IDENTIFY_RESPONSE", nknPublicKey: this.nknClient.getPublicKey() }));
 
                     // But.. We could've received this message too. In that case a new node just identified itself on the network which WE should add to our local addrs.
                     // That's only true when our own public key is different to the one we received.
-                    if (this.nknClient.getPublicKey() != jsonData.myPublicKey) {
-                        nknPublicKey = jsonData.myPublicKey
+                    if (this.nknClient.getPublicKey() != jsonData.nknPublicKey) {
+                        nknPublicKey = jsonData.nknPublicKey
                     } else {
                         return;
                     }
-                } else if (jsonData.task == "IDENTIFY_RESPONSE" && jsonData?.myPublicKey) {
+                } else if (jsonData.task == "IDENTIFY_RESPONSE" && jsonData?.nknPublicKey) {
                     // Is this response for us?
-                    if (this.nknClient.getPublicKey() != jsonData.myPublicKey) {
+                    if (this.nknClient.getPublicKey() != jsonData.nknPublicKey) {
                         // Not us, we want to add this one to our list of addrs to send messages too
-                        nknPublicKey = jsonData.myPublicKey
+                        nknPublicKey = jsonData.nknPublicKey
                     } else {
                         return;
                     }
@@ -80,7 +80,7 @@ class IPFSNKNHelper
             return;
         }
 
-        if(nknPublicKey == "")
+        if(nknPublicKey == null)
         {
             console.log("We did receive data but not valid NKN address.")
             console.log(decodedStr)
