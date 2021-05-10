@@ -13,8 +13,14 @@ class IPFSSubscribeHandler
         this.ipfsClient = ipfsClient;
 
         // Subscribe to the channel
-        this.ipfsClient.pubsub.subscribe(this.channel, (msg) => {
-            this.subscribe(msg)
+        this.ipfsClient.pubsub.subscribe(this.channel, async (msg) => {
+            let idData = await this.ipfsClient.id()
+
+            if (msg.from != idData.id) {
+                this.subscribe(msg)
+            } else {
+                console.log(`A message was received on channel ${this.channel} from itself. Skipping.`)
+            }
         });
 
         console.log(`Subscribe to channel: ${channel}`)
@@ -64,6 +70,7 @@ class IPFSSubscribeHandler
     // If it's false, you don't want to receive your own message. By default it's false.
     async subscribe(msg)
     {
+        console.log(msg)
         // return;
         console.log(`Received message on channel: ${this.channel}, these sockets could receive this message (pre filtering).`)
         console.table(this.sockets.map(sock => sock.id))

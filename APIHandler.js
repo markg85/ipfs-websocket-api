@@ -4,6 +4,7 @@ const nkn = require('nkn-sdk');
 const IPFSSubscribeHandler = require('./IPFSSubscribeHandler');
 const NKNSubscribeHandler = require('./NKNSubscribeHandler');
 const IPFSNKNHelper = require('./IPFSNKNHelper');
+const SIOLocalSubscribeHandler = require('./SIOLocalSubscribeHandler');
 //const ServerStatistics = require('./ServerStatistics');
 
 class APIHandler
@@ -37,7 +38,7 @@ class APIHandler
         this.nknClient.destaddrs = []
         this.nknHelper.setNknClient(this.nknClient)
         this.nknHelper.askAllNknsToReport()
-        this.nknHelper.addSelfToAddrs()
+        // this.nknHelper.addSelfToAddrs()
     }
 
     registerSubscribe(channel, socket)
@@ -54,6 +55,12 @@ class APIHandler
         if (!this.mapping.get(apiMethod)?.some((obj) => { return obj instanceof NKNSubscribeHandler; }))
         {
             this.mapping.set(apiMethod, new NKNSubscribeHandler(channel, this.nknClient))
+        }
+
+        // This must be the only one handling local socket connections! That's just the fastest way.
+        if (!this.mapping.get(apiMethod)?.some((obj) => { return obj instanceof SIOLocalSubscribeHandler; }))
+        {
+            this.mapping.set(apiMethod, new SIOLocalSubscribeHandler(channel))
         }
 
         this.mapping.get(apiMethod).forEach((obj) => {

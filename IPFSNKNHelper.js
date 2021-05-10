@@ -43,7 +43,7 @@ class IPFSNKNHelper
     {
         let enc = new TextDecoder("utf-8");
         let decodedStr = enc.decode(msg.data);
-        let nknPublicKey = ""
+        let nknPublicKey = null
 
         try {
             let jsonData = JSON.parse(decodedStr);
@@ -51,12 +51,20 @@ class IPFSNKNHelper
             {
                 // We have been asked to identify ourselves to jsonData.nknPublicKey
                 if (jsonData.task == "IDENTIFY" && jsonData?.nknPublicKey) {
-                    this.ipfsClient.pubsub.publish(this.opsnNknChannel, JSON.stringify({ task: "IDENTIFY_RESPONSE", myPublicKey: this.nknClient.getPublicKey(), destPublicKey: jsonData.nknPublicKey }));
-                    return;
-                } else if (jsonData.task == "IDENTIFY_RESPONSE" && jsonData?.myPublicKey && jsonData?.destPublicKey) {
+                    // Tell the network my public key
+                    this.ipfsClient.pubsub.publish(this.opsnNknChannel, JSON.stringify({ task: "IDENTIFY_RESPONSE", myPublicKey: this.nknClient.getPublicKey() }));
+
+                    // But.. We could've received this message too. In that case a new node just identified itself on the network which WE should add to our local addrs.
+                    // That's only true when our own public key is different to the one we received.
+                    if (this.nknClient.getPublicKey() != jsonData.myPublicKey) {
+                        nknPublicKey = jsonData.myPublicKey
+                    } else {
+                        return;
+                    }
+                } else if (jsonData.task == "IDENTIFY_RESPONSE" && jsonData?.myPublicKey) {
                     // Is this response for us?
-                    if (this.nknClient.getPublicKey() == jsonData.destPublicKey) {
-                        // Yes, it's for us!
+                    if (this.nknClient.getPublicKey() != jsonData.myPublicKey) {
+                        // Not us, we want to add this one to our list of addrs to send messages too
                         nknPublicKey = jsonData.myPublicKey
                     } else {
                         return;
@@ -66,11 +74,6 @@ class IPFSNKNHelper
                 }
             } else {
                 console.log("There's no task in this data. Ignoring.")
-            }
-
-            if (jsonData.nknPublicKey != undefined)
-            {
-                nknPublicKey = jsonData.nknPublicKey
             }
         } catch(e) {
             console.log("Some bozo is apparently spamming us with fake data i assume... Ignoring.");

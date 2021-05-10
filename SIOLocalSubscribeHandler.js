@@ -3,27 +3,18 @@
 const WebSocket = require('ws');
 const CRC32 = require('crc-32'); 
 
-// This class manages n registrants for 1 topic.
-// An NKNSubscribeHandler class only handles 1 topic and sends messages 
-// received on that one topic to each of the registrants (sockets).
-class NKNSubscribeHandler
+/**
+ * This class handles channel messages from connections to THIS server.
+ * This is an optimization to receive an answer faster for users connected to the same server.
+ */
+class SIOLocalSubscribeHandler
 {
-    constructor(channel, nknClient)
+    constructor(channel)
     {
         this.channel = channel
         this.sockets = []
-        this.nknClient = nknClient;
 
-        // Public key: 03fd4a45582bc45065c556e580543f7aeae14032f99ed24956330855c5ea4bbe
-
-        this.nknClient.onMessage(async ({ src, payload, isEncrypted }) => {
-            console.log("AAAAAAAA")
-            this.subscribe({ src, payload, isEncrypted })
-        });
-
-        console.log(this.nknClient.getSeed(), this.nknClient.getPublicKey());
-
-        console.log(`Subscribe to channel: ${channel}`)
+        console.log(`SIOLocalSubscribeHandler Subscribes to channel: ${channel}`)
     }
 
     // Adds a socket wanting to get messages on the channel this class manages
@@ -59,51 +50,15 @@ class NKNSubscribeHandler
 
     async publish(channel, data)
     {
-        if (this.nknClient.isReady == false) {
-            await Promise.all([
-                new Promise((resolve, reject) => this.nknClient.onConnect(resolve))
-            ]);
-
-            await new Promise((resolve, reject) => setTimeout(resolve, 1000));
-        }
-
-        try {
-            for (let addr of this.nknClient.destaddrs)
-            {
-                this.nknClient.send(
-                    addr,
-                    JSON.stringify({channel: channel, data: data}),
-                    {responseTimeout: 0}
-                );
-            }
-        } catch (error) {
-            console.log(error)
-        }
+        this.subscribe(data)
     }
 
-    async subscribe(msg)
+    async subscribe(decodedData)
     {
         console.log(`Received message on channel: ${this.channel}, these sockets could receive this message (pre filtering).`)
         console.table(this.sockets.map(sock => sock.id))
-        
-        let decodedData = JSON.parse(msg.payload);
 
-        if (decodedData?.channel != this.channel) {
-            console.warn("Received data not intended for this channel.")
-            console.log(decodedData)
-            return;
-        }
-
-        if (decodedData?.data == undefined) {
-            console.error("No data")
-            console.log(decodedData)
-            return;
-        }
-
-        let crc = CRC32.str(JSON.stringify(decodedData.data)).toString()
-
-        // This is the data we're interested in. This came from the website and needs to be broadcast to all interested parties.
-        decodedData = decodedData.data
+        let crc = CRC32.str(JSON.stringify(decodedData)).toString()
 
         let filteredSockets = this.sockets;
 
@@ -128,7 +83,7 @@ class NKNSubscribeHandler
 
         console.log(`Sending data to:`)
         console.table(filteredSockets.map(sock => sock.id))
-        let stringData = `N${JSON.stringify(decodedData?.data)}`
+        let stringData = `L${JSON.stringify(decodedData?.data)}`
         let buffer = Buffer.from(stringData).toString('base64')
 
         for (let socket of filteredSockets)
@@ -144,4 +99,4 @@ class NKNSubscribeHandler
     }
 }
 
-module.exports = NKNSubscribeHandler;
+module.exports = SIOLocalSubscribeHandler;
