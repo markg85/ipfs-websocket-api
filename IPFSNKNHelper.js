@@ -17,6 +17,7 @@ class IPFSNKNHelper
         this.nknClient = null;
         this.opsnNknChannel = "__openpubsubnetwork.nkn"
         this.opsnAddChannel = "__openpubsubnetwork.addChannel"
+        this.opsnPin = "__openpubsubnetwork.pin"
 
         // Subscribe to the channel
         this.ipfsClient.pubsub.subscribe(this.opsnNknChannel, (msg) => {
@@ -25,6 +26,10 @@ class IPFSNKNHelper
 
         this.ipfsClient.pubsub.subscribe(this.opsnAddChannel, (msg) => {
             this.subscribeNewChannel(msg)
+        });
+
+        this.ipfsClient.pubsub.subscribe(this.opsnPin, (msg) => {
+            this.subscribePinRequest(msg)
         });
     }
 
@@ -112,6 +117,15 @@ class IPFSNKNHelper
         let enc = new TextDecoder("utf-8");
         let decodedStr = enc.decode(msg.data);
         this.apiHandler.registerSubscribe(decodedStr)
+    }
+
+    async subscribePinRequest(msg)
+    {
+        let enc = new TextDecoder("utf-8");
+        let decodedStr = enc.decode(msg.data);
+
+        console.log(`IPFS Pinning ${decodedStr} (just blindly trusting this...)`)
+        this.ipfsClient.pin.add(decodedStr)
     }
 
 }
