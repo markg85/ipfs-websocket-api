@@ -1,5 +1,7 @@
 'use strict';
 
+const ApiHandler = require('./APIHandler');
+
 /**
  * This class does the bookkeeping to have all nodes send the publish messages to all other nodes.
  * To do that, this class registers itself on IPFS pubsub. There each node will broadcast it's own
@@ -8,15 +10,21 @@
  */
 class IPFSNKNHelper
 {
-    constructor(ipfsClient)
+    constructor(ipfsClient, apiHandler)
     {
         this.ipfsClient = ipfsClient;
+        this.apiHandler = apiHandler;
         this.nknClient = null;
         this.opsnNknChannel = "__openpubsubnetwork.nkn"
+        this.opsnAddChannel = "__openpubsubnetwork.addChannel"
 
         // Subscribe to the channel
         this.ipfsClient.pubsub.subscribe(this.opsnNknChannel, (msg) => {
             this.subscribe(msg)
+        });
+
+        this.ipfsClient.pubsub.subscribe(this.opsnAddChannel, (msg) => {
+            this.subscribeNewChannel(msg)
         });
     }
 
@@ -28,6 +36,11 @@ class IPFSNKNHelper
     async askAllNknsToReport()
     {
         this.ipfsClient.pubsub.publish(this.opsnNknChannel, JSON.stringify({ task: "IDENTIFY", nknPublicKey: this.nknClient.getPublicKey() }));
+    }
+
+    async broadcastSubscribeRequest(channel)
+    {
+        this.ipfsClient.pubsub.publish(this.opsnAddChannel, channel);
     }
 
     async addSelfToAddrs()
@@ -92,6 +105,13 @@ class IPFSNKNHelper
             this.nknClient.destaddrs.push(nknPublicKey)
             console.log(`Added ${nknPublicKey} to the list of addresses to send publish messages too.`)
         }
+    }
+
+    async subscribeNewChannel(msg)
+    {
+        let enc = new TextDecoder("utf-8");
+        let decodedStr = enc.decode(msg.data);
+        this.apiHandler.registerSubscribe(decodedStr)
     }
 
 }

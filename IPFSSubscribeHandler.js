@@ -23,7 +23,8 @@ class IPFSSubscribeHandler
             }
         });
 
-        console.log(`Subscribe to channel: ${channel}`)
+        console.log(`IPFS Subscribe to channel: ${channel}`)
+        this.ipfsClient.pubsub.ls().then(data => console.log(data))
     }
 
     // Adds a socket wanting to get messages on the channel this class manages
@@ -59,6 +60,7 @@ class IPFSSubscribeHandler
 
     async publish(channel, data)
     {
+        console.log(`IPFS: Retransmitting message channel: ${channel}`)
         this.ipfsClient.pubsub.publish(channel, JSON.stringify(data));
     }
 
@@ -70,9 +72,8 @@ class IPFSSubscribeHandler
     // If it's false, you don't want to receive your own message. By default it's false.
     async subscribe(msg)
     {
-        console.log(msg)
         // return;
-        console.log(`Received message on channel: ${this.channel}, these sockets could receive this message (pre filtering).`)
+        console.log(`IPFS Received message on channel: ${this.channel}, these sockets could receive this message (pre filtering).`)
         console.table(this.sockets.map(sock => sock.id))
         
         let enc = new TextDecoder("utf-8");

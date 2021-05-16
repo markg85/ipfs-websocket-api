@@ -15,7 +15,7 @@ class APIHandler
         this.mapping = new Multimap();
         this.clientData = clientData;
         this.nknClient = null;
-        this.nknHelper = new IPFSNKNHelper(this.ipfsClient)
+        this.nknHelper = new IPFSNKNHelper(this.ipfsClient, this)
 
         // Register the ServerStatistics channel to respond to server statsistics requests.
         // DISABLED for now. The intention is to have a "server statistics" channel in which each server
@@ -41,15 +41,20 @@ class APIHandler
         // this.nknHelper.addSelfToAddrs()
     }
 
-    registerSubscribe(channel, socket)
+    registerSubscribe(channel, socket = null)
     {
         // This is actually a "composed" api method. Just to identify different channels.
         // There is no actual api method with the channel name included in IPFS.
         let apiMethod = `pubsub.subscribe.${channel}`
 
-        if (!this.mapping.get(apiMethod)?.some((obj) => { return obj instanceof IPFSSubscribeHandler; }))
-        {
-            this.mapping.set(apiMethod, new IPFSSubscribeHandler(channel, this.ipfsClient))
+        if (!this.mapping.get(apiMethod)?.some((obj) => { return obj instanceof IPFSSubscribeHandler; })) {
+            // We're not subscribed yet and don't have a socket. This means we received a request to 
+            if (socket == null) {
+                // Subscribe to the requested channel
+                this.mapping.set(apiMethod, new IPFSSubscribeHandler(channel, this.ipfsClient))
+            } else {
+                this.nknHelper.broadcastSubscribeRequest(channel)
+            }
         }
 
         if (!this.mapping.get(apiMethod)?.some((obj) => { return obj instanceof NKNSubscribeHandler; }))
@@ -63,9 +68,11 @@ class APIHandler
             this.mapping.set(apiMethod, new SIOLocalSubscribeHandler(channel))
         }
 
-        this.mapping.get(apiMethod).forEach((obj) => {
-            obj.register(socket);
-        });
+        if (socket != null) {
+            this.mapping.get(apiMethod).forEach((obj) => {
+                obj.register(socket);
+            });
+        }
     }
 
     publish(socket, data)

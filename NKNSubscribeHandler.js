@@ -17,7 +17,6 @@ class NKNSubscribeHandler
         // Public key: 03fd4a45582bc45065c556e580543f7aeae14032f99ed24956330855c5ea4bbe
 
         this.nknClient.onMessage(async ({ src, payload, isEncrypted }) => {
-            console.log("AAAAAAAA")
             this.subscribe({ src, payload, isEncrypted })
         });
 
@@ -68,6 +67,8 @@ class NKNSubscribeHandler
         }
 
         try {
+            console.log(`NKN: Retransmitting message to:`)
+            console.table(this.nknClient.destaddrs)
             for (let addr of this.nknClient.destaddrs)
             {
                 this.nknClient.send(
