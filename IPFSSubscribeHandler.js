@@ -6,11 +6,11 @@ const CRC32 = require('crc-32');
 // received on that one topic to each of the registrants (sockets).
 class IPFSSubscribeHandler
 {
-    constructor(channel, ipfsClient, sockets)
+    constructor(channel, apiHandler)
     {
         this.channel = channel
-        this.sockets = sockets
-        this.ipfsClient = ipfsClient;
+        this.ipfsClient = apiHandler.ipfsClient;
+        this.apiHandler = apiHandler;
 
         // Subscribe to the channel
         this.ipfsClient.pubsub.subscribe(this.channel, async (msg) => {
@@ -25,6 +25,13 @@ class IPFSSubscribeHandler
 
         console.log(`IPFS Subscribe to channel: ${channel}`)
         this.ipfsClient.pubsub.ls().then(data => console.log(data))
+    }
+
+    sockets()
+    {
+        return this.apiHandler.sockets.filter((sock) => { 
+            return sock.channel == this.channel;
+        });
     }
 
     async publish(channel, data)
@@ -43,7 +50,7 @@ class IPFSSubscribeHandler
     {
         // return;
         console.log(`IPFS Received message on channel: ${this.channel}, these sockets could receive this message (pre filtering).`)
-        console.table(this.sockets.map(sock => sock.id))
+        console.table(this.sockets().map(sock => sock.id))
         
         let enc = new TextDecoder("utf-8");
         let decodedStr = enc.decode(msg.data);
@@ -58,11 +65,11 @@ class IPFSSubscribeHandler
             decodedData = decodedStr
         }
         
-        let filteredSockets = this.sockets;
+        let filteredSockets = this.sockets();
 
         if (decodedData?.selfEmit === false)
         {
-            filteredSockets = this.sockets.filter((sock) => { 
+            filteredSockets = filteredSockets.filter((sock) => { 
                 return sock.id !== decodedData?.id;
             });
         }

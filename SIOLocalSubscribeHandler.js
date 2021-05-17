@@ -9,12 +9,19 @@ const CRC32 = require('crc-32');
  */
 class SIOLocalSubscribeHandler
 {
-    constructor(channel, sockets)
+    constructor(channel, apiHandler)
     {
         this.channel = channel
-        this.sockets = sockets
+        this.apiHandler = apiHandler;
 
         console.log(`SIOLocalSubscribeHandler Subscribes to channel: ${channel}`)
+    }
+
+    sockets()
+    {
+        return this.apiHandler.sockets.filter((sock) => { 
+            return sock.channel == this.channel;
+        });
     }
 
     async publish(channel, data)
@@ -25,15 +32,15 @@ class SIOLocalSubscribeHandler
     async subscribe(decodedData)
     {
         console.log(`Received message on channel: ${this.channel}, these sockets could receive this message (pre filtering).`)
-        console.table(this.sockets.map(sock => sock.id))
+        console.table(this.sockets().map(sock => sock.id))
 
         let crc = CRC32.str(JSON.stringify(decodedData)).toString()
 
-        let filteredSockets = this.sockets;
+        let filteredSockets = this.sockets();
 
         if (decodedData?.selfEmit === false)
         {
-            filteredSockets = this.sockets.filter((sock) => { 
+            filteredSockets = filteredSockets.filter((sock) => { 
                 return sock.id !== decodedData?.id;
             });
         }
@@ -52,7 +59,15 @@ class SIOLocalSubscribeHandler
 
         console.log(`Sending data to:`)
         console.table(filteredSockets.map(sock => sock.id))
-        let stringData = `L${JSON.stringify(decodedData?.data)}`
+
+        let stringData = decodedData
+
+        if (decodedData?.data) {
+            stringData = JSON.stringify(decodedData?.data)
+        }
+
+        stringData = `L${stringData}`
+
         let buffer = Buffer.from(stringData).toString('base64')
 
         for (let socket of filteredSockets)

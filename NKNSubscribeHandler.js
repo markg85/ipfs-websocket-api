@@ -8,11 +8,11 @@ const CRC32 = require('crc-32');
 // received on that one topic to each of the registrants (sockets).
 class NKNSubscribeHandler
 {
-    constructor(channel, nknClient, sockets)
+    constructor(channel, apiHandler)
     {
         this.channel = channel
-        this.sockets = sockets
-        this.nknClient = nknClient;
+        this.nknClient = apiHandler.nknClient;
+        this.apiHandler = apiHandler;
 
         // Public key: 03fd4a45582bc45065c556e580543f7aeae14032f99ed24956330855c5ea4bbe
 
@@ -23,6 +23,13 @@ class NKNSubscribeHandler
         console.log(this.nknClient.getSeed(), this.nknClient.getPublicKey());
 
         console.log(`Subscribe to channel: ${channel}`)
+    }
+
+    sockets()
+    {
+        return this.apiHandler.sockets.filter((sock) => { 
+            return sock.channel == this.channel;
+        });
     }
 
     async publish(channel, data)
@@ -54,7 +61,7 @@ class NKNSubscribeHandler
     async subscribe(msg)
     {
         console.log(`Received message on channel: ${this.channel}, these sockets could receive this message (pre filtering).`)
-        console.table(this.sockets.map(sock => sock.id))
+        console.table(this.sockets().map(sock => sock.id))
         
         let decodedData = JSON.parse(msg.payload);
 
@@ -75,11 +82,11 @@ class NKNSubscribeHandler
         // This is the data we're interested in. This came from the website and needs to be broadcast to all interested parties.
         decodedData = decodedData.data
 
-        let filteredSockets = this.sockets;
+        let filteredSockets = this.sockets();
 
         if (decodedData?.selfEmit === false)
         {
-            filteredSockets = this.sockets.filter((sock) => { 
+            filteredSockets = filteredSockets.filter((sock) => { 
                 return sock.id !== decodedData?.id;
             });
         }
@@ -98,7 +105,15 @@ class NKNSubscribeHandler
 
         console.log(`Sending data to:`)
         console.table(filteredSockets.map(sock => sock.id))
-        let stringData = `N${JSON.stringify(decodedData?.data)}`
+
+        let stringData = decodedData
+
+        if (decodedData?.data) {
+            stringData = JSON.stringify(decodedData?.data)
+        }
+
+        stringData = `N${stringData}`
+
         let buffer = Buffer.from(stringData).toString('base64')
 
         for (let socket of filteredSockets)

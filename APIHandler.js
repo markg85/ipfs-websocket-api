@@ -52,7 +52,7 @@ class APIHandler
             // We're not subscribed yet and don't have a socket. This means we received a request to 
             if (socket == null) {
                 // Subscribe to the requested channel
-                this.mapping.set(apiMethod, new IPFSSubscribeHandler(channel, this.ipfsClient, this.sockets))
+                this.mapping.set(apiMethod, new IPFSSubscribeHandler(channel, this))
             } else {
                 this.nknHelper.broadcastSubscribeRequest(channel)
             }
@@ -60,16 +60,17 @@ class APIHandler
 
         if (!this.mapping.get(apiMethod)?.some((obj) => { return obj instanceof NKNSubscribeHandler; }))
         {
-            this.mapping.set(apiMethod, new NKNSubscribeHandler(channel, this.nknClient, this.sockets))
+            this.mapping.set(apiMethod, new NKNSubscribeHandler(channel, this))
         }
 
         // This must be the only one handling local socket connections! That's just the fastest way.
         if (!this.mapping.get(apiMethod)?.some((obj) => { return obj instanceof SIOLocalSubscribeHandler; }))
         {
-            this.mapping.set(apiMethod, new SIOLocalSubscribeHandler(channel, this.sockets))
+            this.mapping.set(apiMethod, new SIOLocalSubscribeHandler(channel, this))
         }
 
         if (socket != null) {
+            socket.channel = channel
             this.sockets.push(socket)
         }
     }
