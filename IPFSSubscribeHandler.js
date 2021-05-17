@@ -81,7 +81,14 @@ class IPFSSubscribeHandler
 
         let crc = CRC32.str(decodedStr).toString()
 
-        let decodedData = JSON.parse(decodedStr);
+        let decodedData = ""
+        
+        try {
+            decodedData = JSON.parse(decodedStr);
+        } catch (error) {
+            decodedData = decodedStr
+        }
+        
         let filteredSockets = this.sockets;
 
         if (decodedData?.selfEmit === false)
