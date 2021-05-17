@@ -14,7 +14,7 @@ class IPFSSubscribeHandler
 
         // Subscribe to the channel
         this.ipfsClient.pubsub.subscribe(this.channel, async (msg) => {
-            let idData = await this.ipfsClient.id()
+            // let idData = await this.ipfsClient.id()
 
             // if (msg.from != idData.id) {
                 this.subscribe(msg)
@@ -24,7 +24,7 @@ class IPFSSubscribeHandler
         });
 
         console.log(`IPFS Subscribe to channel: ${channel}`)
-        this.ipfsClient.pubsub.ls().then(data => console.log(data))
+        // this.ipfsClient.pubsub.ls().then(data => console.log(data))
     }
 
     sockets()
@@ -93,6 +93,8 @@ class IPFSSubscribeHandler
 
         if (decodedData?.data) {
             stringData = JSON.stringify(decodedData?.data)
+        } else if (typeof decodedData === 'object') {
+            stringData = JSON.stringify(decodedData)
         }
 
         stringData = `P${stringData}`

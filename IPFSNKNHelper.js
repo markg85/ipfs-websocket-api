@@ -10,9 +10,9 @@ const ApiHandler = require('./APIHandler');
  */
 class IPFSNKNHelper
 {
-    constructor(ipfsClient, apiHandler)
+    constructor(apiHandler)
     {
-        this.ipfsClient = ipfsClient;
+        this.ipfsClient = apiHandler.ipfsClient;
         this.apiHandler = apiHandler;
         this.nknClient = null;
         this.opsnNknChannel = "__openpubsubnetwork.nkn"
@@ -123,9 +123,10 @@ class IPFSNKNHelper
     {
         let enc = new TextDecoder("utf-8");
         let decodedStr = enc.decode(msg.data);
+        let decodedData = JSON.parse(decodedStr);
 
-        console.log(`IPFS Pinning ${decodedStr} (just blindly trusting this...)`)
-        this.ipfsClient.pin.add(decodedStr)
+        console.log(`IPFS Pinning ${decodedData?.cid} (just blindly trusting this...)`)
+        this.ipfsClient.pin.add(decodedData?.cid)
     }
 
 }

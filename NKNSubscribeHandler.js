@@ -110,6 +110,8 @@ class NKNSubscribeHandler
 
         if (decodedData?.data) {
             stringData = JSON.stringify(decodedData?.data)
+        } else if (typeof decodedData === 'object') {
+            stringData = JSON.stringify(decodedData)
         }
 
         stringData = `N${stringData}`

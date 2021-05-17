@@ -15,7 +15,7 @@ class APIHandler
         this.mapping = new Multimap();
         this.clientData = clientData;
         this.nknClient = null;
-        this.nknHelper = new IPFSNKNHelper(this.ipfsClient, this)
+        this.nknHelper = new IPFSNKNHelper(this)
         this.sockets = []
 
         // Register the ServerStatistics channel to respond to server statsistics requests.
