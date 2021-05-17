@@ -9,43 +9,12 @@ const CRC32 = require('crc-32');
  */
 class SIOLocalSubscribeHandler
 {
-    constructor(channel)
+    constructor(channel, sockets)
     {
         this.channel = channel
-        this.sockets = []
+        this.sockets = sockets
 
         console.log(`SIOLocalSubscribeHandler Subscribes to channel: ${channel}`)
-    }
-
-    // Adds a socket wanting to get messages on the channel this class manages
-    register(socket)
-    {
-        if (this.sockets.some(sock => sock.id === socket.id))
-        {
-            console.log(`Socket with ${socket.id} already exists, not adding it.`)
-            return;
-        }
-
-        this.sockets.push(socket)
-
-        console.log(`Registered socket id: ${socket.id} to receive messages from channel: ${this.channel}. The following sockets now get served when a message is received:`);
-        console.table(this.sockets.map(sock => sock.id))
-    }
-
-    // Removes a socket. Could be because of a disconnect or just not interested in the toipic anymore.
-    remove(id)
-    {
-        let filtered = this.sockets.filter((value) => { 
-            return value.id !== id;
-        });
-        this.sockets = filtered;
-
-        if (this.sockets.empty) {
-            unsubscribe()
-        }
-
-        console.log(`Sockets were deleted. The following sockets now get served when a message is received:`);
-        console.table(this.sockets.map(sock => sock.id))
     }
 
     async publish(channel, data)

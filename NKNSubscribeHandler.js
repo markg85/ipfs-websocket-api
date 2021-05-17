@@ -8,10 +8,10 @@ const CRC32 = require('crc-32');
 // received on that one topic to each of the registrants (sockets).
 class NKNSubscribeHandler
 {
-    constructor(channel, nknClient)
+    constructor(channel, nknClient, sockets)
     {
         this.channel = channel
-        this.sockets = []
+        this.sockets = sockets
         this.nknClient = nknClient;
 
         // Public key: 03fd4a45582bc45065c556e580543f7aeae14032f99ed24956330855c5ea4bbe
@@ -23,37 +23,6 @@ class NKNSubscribeHandler
         console.log(this.nknClient.getSeed(), this.nknClient.getPublicKey());
 
         console.log(`Subscribe to channel: ${channel}`)
-    }
-
-    // Adds a socket wanting to get messages on the channel this class manages
-    register(socket)
-    {
-        if (this.sockets.some(sock => sock.id === socket.id))
-        {
-            console.log(`Socket with ${socket.id} already exists, not adding it.`)
-            return;
-        }
-
-        this.sockets.push(socket)
-
-        console.log(`Registered socket id: ${socket.id} to receive messages from channel: ${this.channel}. The following sockets now get served when a message is received:`);
-        console.table(this.sockets.map(sock => sock.id))
-    }
-
-    // Removes a socket. Could be because of a disconnect or just not interested in the toipic anymore.
-    remove(id)
-    {
-        let filtered = this.sockets.filter((value) => { 
-            return value.id !== id;
-        });
-        this.sockets = filtered;
-
-        if (this.sockets.empty) {
-            unsubscribe()
-        }
-
-        console.log(`Sockets were deleted. The following sockets now get served when a message is received:`);
-        console.table(this.sockets.map(sock => sock.id))
     }
 
     async publish(channel, data)

@@ -16,6 +16,7 @@ class APIHandler
         this.clientData = clientData;
         this.nknClient = null;
         this.nknHelper = new IPFSNKNHelper(this.ipfsClient, this)
+        this.sockets = []
 
         // Register the ServerStatistics channel to respond to server statsistics requests.
         // DISABLED for now. The intention is to have a "server statistics" channel in which each server
@@ -51,7 +52,7 @@ class APIHandler
             // We're not subscribed yet and don't have a socket. This means we received a request to 
             if (socket == null) {
                 // Subscribe to the requested channel
-                this.mapping.set(apiMethod, new IPFSSubscribeHandler(channel, this.ipfsClient))
+                this.mapping.set(apiMethod, new IPFSSubscribeHandler(channel, this.ipfsClient, this.sockets))
             } else {
                 this.nknHelper.broadcastSubscribeRequest(channel)
             }
@@ -59,19 +60,17 @@ class APIHandler
 
         if (!this.mapping.get(apiMethod)?.some((obj) => { return obj instanceof NKNSubscribeHandler; }))
         {
-            this.mapping.set(apiMethod, new NKNSubscribeHandler(channel, this.nknClient))
+            this.mapping.set(apiMethod, new NKNSubscribeHandler(channel, this.nknClient, this.sockets))
         }
 
         // This must be the only one handling local socket connections! That's just the fastest way.
         if (!this.mapping.get(apiMethod)?.some((obj) => { return obj instanceof SIOLocalSubscribeHandler; }))
         {
-            this.mapping.set(apiMethod, new SIOLocalSubscribeHandler(channel))
+            this.mapping.set(apiMethod, new SIOLocalSubscribeHandler(channel, this.sockets))
         }
 
         if (socket != null) {
-            this.mapping.get(apiMethod).forEach((obj) => {
-                obj.register(socket);
-            });
+            this.sockets.push(socket)
         }
     }
 
@@ -88,9 +87,16 @@ class APIHandler
 
     remove(id)
     {
-        this.mapping.forEach((value) => {
-            value.remove(id);
+        let filtered = this.sockets.filter((value) => { 
+            return value.id !== id;
         });
+        this.sockets = filtered;
+
+        if (this.sockets.empty) {
+            this.mapping.forEach((value) => {
+                value.unsubscribe();
+            });
+        }
     }
 }
 
